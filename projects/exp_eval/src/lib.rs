@@ -23,17 +23,24 @@ fn eval(e: Expression) -> Result<i64, String> {
             return Ok(v);
         }
         Expression::Op { op, left, right } => {
-            match eval(left) {
-                Ok(v) => {
-
-                },
-                Err()
-            }
+            let l_eval = match eval(*left) {
+                Ok(v) => v,
+                Err(err) => return Err(err),
+            };
+            let r_eval = match eval(*right) {
+                Ok(v) => v,
+                Err(err) => return Err(err),
+            };
             match op {
-                Operation::Add => Ok(left + right),
-                Operation::Sub => todo!(),
-                Operation::Mul => todo!(),
-                Operation::Div => todo!(),
+                Operation::Add => Ok(l_eval + r_eval),
+                Operation::Sub => Ok(l_eval - r_eval),
+                Operation::Mul => Ok(l_eval * r_eval),
+                Operation::Div => {
+                    if r_eval == 0 {
+                        return Err("division by zero".to_string());
+                    }
+                    return Ok(l_eval / r_eval);
+                },
             }
         }
     }
