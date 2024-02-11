@@ -23,14 +23,8 @@ fn eval(e: Expression) -> Result<i64, String> {
             return Ok(v);
         }
         Expression::Op { op, left, right } => {
-            let l_eval = match eval(*left) {
-                Ok(v) => v,
-                Err(err) => return Err(err),
-            };
-            let r_eval = match eval(*right) {
-                Ok(v) => v,
-                Err(err) => return Err(err),
-            };
+            let l_eval = eval(*left)?;
+            let r_eval = eval(*right)?;
             match op {
                 Operation::Add => Ok(l_eval + r_eval),
                 Operation::Sub => Ok(l_eval - r_eval),
