@@ -30,10 +30,10 @@ fn get_stats(numbers: &[i32]) -> Stats {
     // let mut enties: Vec<(&i32, &i32)> = counter.iter().collect();
     let mut counter_entries = counter.iter()
         .collect::<Vec<(&i32, &i32)>>();
-    counter_entries.sort_by(|a, b| if a.1 != b.1 {
-        a.1.cmp(b.1).reverse()
-    } else {
+    counter_entries.sort_by(|a, b| if a.1 == b.1 {
         a.0.cmp(b.0)
+    } else {
+        a.1.cmp(b.1).reverse()
     });
 
     return Stats {
