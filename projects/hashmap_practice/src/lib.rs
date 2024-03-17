@@ -5,12 +5,12 @@ use std::collections::HashMap;
 #[derive(Debug,PartialEq)]
 struct Stats {
     mean: f64,
-    med: i32,
-    mode: i32,
+    med: i64,
+    mode: i64,
 }
 
 #[allow(dead_code)]
-fn get_stats(numbers: &[i32]) -> Stats {
+fn get_stats(numbers: &[i64]) -> Stats {
     if numbers.len() == 0 {
         return Stats {mean: 0.0, med: 0, mode: 0};
     }
@@ -18,7 +18,7 @@ fn get_stats(numbers: &[i32]) -> Stats {
     let mut numbers_vec = numbers.to_vec();
     numbers_vec.sort();
 
-    let mut counter = HashMap::<i32, i32>::new();
+    let mut counter = HashMap::new();
     let mut sum = 0;
     for n in numbers_vec.iter() {
         counter.entry(*n)
@@ -27,9 +27,8 @@ fn get_stats(numbers: &[i32]) -> Stats {
         sum += n;
     }
 
-    // let mut enties: Vec<(&i32, &i32)> = counter.iter().collect();
     let mut counter_entries = counter.iter()
-        .collect::<Vec<(&i32, &i32)>>();
+        .collect::<Vec<(&i64, &i64)>>();
     counter_entries.sort_by(|a, b| if a.1 == b.1 {
         a.0.cmp(b.0)
     } else {
@@ -37,7 +36,7 @@ fn get_stats(numbers: &[i32]) -> Stats {
     });
 
     return Stats {
-        mean: f64::from(sum / numbers.len() as i32),
+        mean: (sum / numbers.len() as i64) as f64,
         med: numbers_vec[numbers_vec.len()/2],
         mode: *counter_entries[0].0,
     }
@@ -71,7 +70,7 @@ mod tests {
 
     #[test]
     fn pass_empty_list() {
-        let numbers: Vec<i32> = Vec::new();
+        let numbers: Vec<i64> = Vec::new();
         let result = get_stats(&numbers);
         assert_eq!(result, Stats {mean: 0.0, med: 0, mode: 0});
     }
