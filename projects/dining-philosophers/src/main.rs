@@ -21,28 +21,25 @@ impl Philosopher {
 
     fn eat(&self) {
         // Pick up forks...
+        let _left_fork = self.left_fork.lock().unwrap();
+        let _right_fork = self.right_fork.lock().unwrap();
         println!("{} is eating...", &self.name);
         thread::sleep(Duration::from_millis(10));
     }
 
     fn action(&self) {
-        let left_fork = self.left_fork.try_lock();
-        let left_fork_unused: bool = match left_fork {
-            Ok(_) => true,
-            Err(_) => false,
-        };
+        self.eat();
+        self.think();
+        // let left_fork = self.left_fork.try_lock();
+        // let right_fork = self.right_fork.try_lock();
 
-        let right_fork = self.right_fork.try_lock();
-        let right_fork_unused: bool = match right_fork {
-            Ok(_) => true,
-            Err(_) => false,
-        };
-
-        if left_fork_unused && right_fork_unused {
-            self.eat()
-        } else {
-            self.think();
-        };
+        // if left_fork.is_ok() && right_fork.is_ok() {
+        //     self.eat()
+        // } else {
+        //     drop(left_fork);
+        //     drop(right_fork);
+        //     self.think();
+        // };
     }
 }
 
@@ -60,12 +57,17 @@ fn main() {
     let (tx, rx): (Sender<String>, Receiver<String>) = mpsc::channel();
     let mut philosophers: Vec<Philosopher> = Vec::new();
     for n in 0..PHILOSOPHERS.len() {
-        let philosopher = Philosopher{
+        let mut philosopher = Philosopher{
             name: PHILOSOPHERS[n].to_string(),
             left_fork: Arc::clone(&forks[if n == 0 {PHILOSOPHERS.len()-1} else {n - 1}]),
             right_fork: Arc::clone(&forks[n]),
             thoughts: mpsc::Sender::clone(&tx),
         };
+
+        // avoid deadlock
+        if n == 0 {
+            std::mem::swap(&mut philosopher.left_fork, &mut philosopher.right_fork)
+        }
         philosophers.push(philosopher)
     }
 
@@ -81,15 +83,17 @@ fn main() {
         handles.push(handle);
     }
 
+    thread::spawn(move || {
+        for thought in rx {
+            println!("{thought}");
+        }
+    });
+
     // Output their thoughts
     for handle in handles {
         handle.join().unwrap();
     }
     drop(tx);
-
-    for thought in rx {
-        println!("{thought}");
-    }
 
     println!("finish.")
 }
