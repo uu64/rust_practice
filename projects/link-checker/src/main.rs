@@ -1,3 +1,5 @@
+use std::{sync::mpsc, thread};
+
 use reqwest::blocking::Client;
 use reqwest::Url;
 use scraper::{Html, Selector};
@@ -51,11 +53,54 @@ fn visit_page(client: &Client, command: &CrawlCommand) -> Result<Vec<Url>, Error
 }
 
 fn main() {
-    let client = Client::new();
-    let start_url = Url::parse("https://www.google.org").unwrap();
-    let crawl_command = CrawlCommand{ url: start_url, extract_links: true };
-    match visit_page(&client, &crawl_command) {
-        Ok(links) => println!("Links: {links:#?}"),
-        Err(err) => println!("Could not extract links: {err:#}"),
+
+    let (dispatcher_in, dispather_out) = mpsc::channel();
+    let (extractor_in, extractor_out) = mpsc::channel();
+
+    // wait input
+    thread::spawn(|| {
+        for received in extractor_out {
+            // todo: send to dispather_in
+            match received {
+                Ok(links) => println!("Links: {links:#?}"),
+                Err(err) => println!("Could not extract links: {err:#}"),
+            }
+        }
+    });
+
+
+    // initialize
+    dispatcher_in.send("https://www.google.org").unwrap();
+
+    // extracct
+    let mut handles = vec![];
+    for url in dispather_out {
+        // // todo: break condition
+        // if true {
+        //     break
+        // }
+
+        let client = Client::new();
+        let start_url = Url::parse(url).unwrap();
+        let crawl_command = CrawlCommand{ url: start_url, extract_links: true };
+
+        // link extractor
+        let tx = mpsc::Sender::clone(&extractor_in);
+        let handle = thread::spawn(move || {
+            let result = visit_page(&client, &crawl_command);
+            tx.send(result).unwrap();
+        });
+        handles.push(handle);
+
+        // todo: break condition
+        if true {
+            break
+        }
+    };
+
+    for handle in handles {
+        handle.join().unwrap();
     }
+
+    println!("finish.")
 }
