@@ -1,4 +1,4 @@
-use std::{sync::mpsc, thread};
+use std::{collections::HashSet, sync::mpsc, thread};
 
 use reqwest::blocking::Client;
 use reqwest::Url;
@@ -52,17 +52,28 @@ fn visit_page(client: &Client, command: &CrawlCommand) -> Result<Vec<Url>, Error
     Ok(link_urls)
 }
 
+const MAX_NUM_PROCESSED: usize = 10;
+
 fn main() {
     let (tx, rx) = mpsc::channel();
+    let mut visited: HashSet<String> = HashSet::new();
 
     // initialize
-    tx.send(String::from("https://www.google.org")).unwrap();
+    let url = Url::parse("https://www.google.org").unwrap();
+    tx.send(url.to_string()).unwrap();
 
-    // extracct
+    // extract
     let mut handles = vec![];
-    for (num_processed, url) in rx.into_iter().enumerate() {
-        if num_processed > 9 {
-            break
+    let mut num_processed = 0;
+    for url in rx {
+        if num_processed == MAX_NUM_PROCESSED {
+            break;
+        }
+
+        if visited.contains(&url) {
+            continue;
+        } else {
+            visited.insert(url.clone());
         }
 
         let client = Client::new();
@@ -74,6 +85,7 @@ fn main() {
             let result = visit_page(&client, &crawl_command);
             match result {
                 Ok(links) => {
+                    // println!("{url} has links: {links:#?}");
                     for l in links {
                         if tx.send(l.to_string()).is_err() {
                             // channel is probably closed
@@ -85,6 +97,7 @@ fn main() {
             }
         });
         handles.push(handle);
+        num_processed += 1;
     };
 
     for handle in handles {
